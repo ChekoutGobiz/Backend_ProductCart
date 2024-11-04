@@ -1,4 +1,4 @@
-module github.com/kuyjajan/kuyjajan-backend
+module github.com/ChekOutGobiz/BackendCheckout
 
 go 1.19
 
