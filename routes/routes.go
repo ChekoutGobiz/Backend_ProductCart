@@ -4,9 +4,9 @@ package routes
 import (
 	"net/http"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/kuyjajan/kuyjajan-backend/controllers"
+	"github.com/gocroot/config"
+	"github.com/gocroot/controllers"
+	"github.com/gocroot/handlers/at"
 )
 
 // SetupRoutes sets up all the routes for the application
