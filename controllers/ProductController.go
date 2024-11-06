@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/kuyjajan/kuyjajan-backend/config"
-	"github.com/kuyjajan/kuyjajan-backend/models"
+	"github.com/ChekoutGobiz/BackendChekout/config"
+	"github.com/ChekoutGobiz/BackendChekout/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
