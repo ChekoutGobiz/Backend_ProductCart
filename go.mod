@@ -1,4 +1,4 @@
-module github.com/ChekOutGobiz/BackendCheckout
+module github.com/ChekoutGobiz/BackendChekout
 
 go 1.19
 
