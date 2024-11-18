@@ -1,16 +1,46 @@
 package config
 
 import (
+	"log"
 	"os"
 
-	"github.com/gocroot/helper/atdb"
+	models "github.com/ChekoutGobiz/BackendChekout/model"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var MongoString string = os.Getenv("mongodb+srv://dewidesember20:x6Wl5XF3ZNE1QcnS@cluster0.gkatt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+// Mongo connection string directly from the environment
+var MongoString string = os.Getenv("MONGOSTRING")
 
-var mongoinfo = atdb.DBInfo{
+// DBInfo struct now uses MongoString directly, no SRVLookup required
+var mongoinfo = models.DBInfo{
 	DBString: MongoString,
 	DBName:   "jajankuy",
 }
 
-var Mongoconn, ErrorMongoconn = atdb.MongoConnect(mongoinfo)
+// Mongo connection using the provided string
+var Mongoconn *mongo.Client
+
+// Initialize MongoDB connection
+func init() {
+	if MongoString == "" {
+		log.Fatal("MongoDB connection string (MONGOSTRING) is required")
+	}
+
+	clientOptions := options.Client().ApplyURI(MongoString)
+	client, err := mongo.Connect(nil, clientOptions)
+	if err != nil {
+		log.Fatal("Failed to connect to MongoDB:", err)
+	}
+
+	// Optionally, check if the connection is successful
+	err = client.Ping(nil, nil)
+	if err != nil {
+		log.Fatal("Failed to ping MongoDB:", err)
+	}
+
+	// Store the client reference in Mongoconn
+	Mongoconn = client
+
+	log.Println("MongoDB connection established successfully")
+}
