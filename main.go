@@ -1,22 +1,20 @@
-// main.go
 package main
 
 import (
 	"log"
-	"net/http"
 
-	"github.com/kuyjajan/kuyjajan-backend/config"
-	"github.com/kuyjajan/kuyjajan-backend/routes"
+	"gocroot/config"
+
+	"github.com/gofiber/fiber/v2/middleware/cors"
+
+	"gocroot/url"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
-	// Initialize MongoDB connection
-	config.ConnectDB()
-
-	// Setup routes
-	router := routes.SetupRoutes()
-
-	// Start the server
-	log.Println("Server berjalan di port 8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	site := fiber.New(config.Iteung)
+	site.Use(cors.New(config.Cors))
+	url.Web(site)
+	log.Fatal(site.Listen(config.IPPort))
 }
