@@ -1,46 +1,37 @@
 package config
 
 import (
+	"context"
 	"log"
 	"os"
+	"time"
 
-	models "github.com/ChekoutGobiz/BackendChekout/model"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// Mongo connection string directly from the environment
-var MongoString string = os.Getenv("MONGOSTRING")
+var DB *mongo.Client
 
-// DBInfo struct now uses MongoString directly, no SRVLookup required
-var mongoinfo = models.DBInfo{
-	DBString: MongoString,
-	DBName:   "jajankuy",
-}
-
-// Mongo connection using the provided string
-var Mongoconn *mongo.Client
-
-// Initialize MongoDB connection
-func init() {
-	if MongoString == "" {
-		log.Fatal("MongoDB connection string (MONGOSTRING) is required")
+// Koneksi ke MongoDB
+func ConnectDB() {
+	mongoURI := os.Getenv("MONGOSTRING")
+	if mongoURI == "" {
+		log.Fatal("MongoDB connection string (MONGOSTRING) tidak ditemukan di environment.")
 	}
 
-	clientOptions := options.Client().ApplyURI(MongoString)
-	client, err := mongo.Connect(nil, clientOptions)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		log.Fatal("Failed to connect to MongoDB:", err)
+		log.Fatalf("Gagal koneksi ke MongoDB: %v", err)
 	}
 
-	// Optionally, check if the connection is successful
-	err = client.Ping(nil, nil)
-	if err != nil {
-		log.Fatal("Failed to ping MongoDB:", err)
+	// Ping database untuk memastikan koneksi
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Fatalf("Gagal ping ke MongoDB: %v", err)
 	}
 
-	// Store the client reference in Mongoconn
-	Mongoconn = client
-
-	log.Println("MongoDB connection established successfully")
+	log.Println("Koneksi MongoDB berhasil.")
+	DB = client
 }
