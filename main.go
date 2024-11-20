@@ -3,18 +3,21 @@ package main
 import (
 	"log"
 
-	"gocroot/config"
-
-	"github.com/gofiber/fiber/v2/middleware/cors"
-
-	"gocroot/url"
-
+	"github.com/ChekoutGobiz/BackendChekout/config"
+	"github.com/ChekoutGobiz/BackendChekout/url"
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
-	site := fiber.New(config.Iteung)
-	site.Use(cors.New(config.Cors))
-	url.Web(site)
-	log.Fatal(site.Listen(config.IPPort))
+	// Membuat instance aplikasi Fiber dengan konfigurasi yang telah disediakan
+	app := fiber.New(config.GoBiz)
+
+	// Menambahkan middleware CORS dengan pengaturan yang ada di config
+	app.Use(config.Cors)
+
+	// Setup semua routes
+	url.SetupRoutes(app)
+
+	// Memulai aplikasi pada port yang telah disetting
+	log.Fatal(app.Listen(config.IPPort))
 }
