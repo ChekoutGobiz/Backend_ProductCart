@@ -21,11 +21,11 @@ func SetupRoutes(app *fiber.App) {
 	// Product routes
 	api.Post("/products", controllers.CreateProduct)
 	api.Get("/products", controllers.GetProducts)
-	api.Get("/products/region", controllers.GetProductsByRegion)
 
 	// Cart routes
-	api.Post("/cart", controllers.AddToCart)
+	api.Post("/cart", controllers.AddItemToCart)
 	api.Get("/cart", controllers.GetCart)
 	api.Put("/cart/item", controllers.UpdateCartItem)
 	api.Delete("/cart/item", controllers.RemoveCartItem)
+	api.Delete("/cart/item/:product_id", controllers.RemoveItemFromCart)
 }
