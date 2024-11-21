@@ -55,8 +55,19 @@ func CreateProduct(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate new ObjectID for product
-	product.ID = primitive.NewObjectID() // Menggunakan primitive.NewObjectID() untuk ID baru
+	// Jika tidak ada harga yang diberikan, set default harga ke 0
+	if product.DiscountPrice == 0 {
+		product.DiscountPrice = 0
+	}
+	if product.OriginalPrice == 0 {
+		product.OriginalPrice = 0
+	}
+
+	// Tambahkan ID, CreatedAt, dan UpdatedAt
+	product.ID = primitive.NewObjectID()
+	product.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
+	product.UpdatedAt = primitive.NewDateTimeFromTime(time.Now())
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -67,7 +78,6 @@ func CreateProduct(c *fiber.Ctx) error {
 		})
 	}
 
-	// Mengembalikan respons dalam format JSON
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"product": product,
 	})
@@ -97,44 +107,6 @@ func GetProducts(c *fiber.Ctx) error {
 		products = append(products, product)
 	}
 
-	// Mengembalikan hasil dalam format JSON
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"products": products,
-	})
-}
-
-// GetProductsByRegion retrieves products based on a specific region
-func GetProductsByRegion(c *fiber.Ctx) error {
-	regionID := c.Query("region_id")
-	if regionID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Region ID is required",
-		})
-	}
-
-	var products []models.Product
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	cursor, err := productCollection.Find(ctx, bson.M{"region_id": regionID})
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to get products by region",
-		})
-	}
-	defer cursor.Close(ctx)
-
-	for cursor.Next(ctx) {
-		var product models.Product
-		if err := cursor.Decode(&product); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Failed to decode product",
-			})
-		}
-		products = append(products, product)
-	}
-
-	// Mengembalikan hasil dalam format JSON
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"products": products,
 	})
