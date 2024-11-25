@@ -98,8 +98,9 @@ func AddItemToCart(c *fiber.Ctx) error {
 	_, err = cartCollection.UpdateOne(
 		context.Background(),
 		bson.M{"user_id": userObjectID},
-		bson.M{"$set": bson.M{"items": cart.Items, "updated_at": time.Now()}})
-
+		bson.M{"$set": bson.M{"items": cart.Items, "updated_at": time.Now()}},
+		options.Update().SetUpsert(true), // Tambahkan opsi upsert
+	)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update cart",
@@ -211,6 +212,7 @@ func RemoveItemFromCart(c *fiber.Ctx) error {
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
+
 // RemoveCartItem removes an item from the cart
 func RemoveCartItem(c *fiber.Ctx) error {
 	productIDStr := c.Query("product_id")

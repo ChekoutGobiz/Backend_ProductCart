@@ -49,8 +49,8 @@ func (c *Cart) RemoveItem(productID primitive.ObjectID) {
 }
 
 // TotalPrice calculates the total price of the cart by summing up prices of all items
-func (c *Cart) TotalPrice(productsCollection *mongo.Collection) (float64, error) {
-	var totalPrice float64
+func (c *Cart) TotalPrice(productsCollection *mongo.Collection) (int64, error) {
+	var totalPrice int64
 
 	// Loop through each cart item and calculate the total price
 	for _, cartItem := range c.Items {
@@ -62,7 +62,7 @@ func (c *Cart) TotalPrice(productsCollection *mongo.Collection) (float64, error)
 		}
 
 		// Determine which price to use (DiscountPrice if available, else OriginalPrice)
-		var price float64
+		var price int64
 		if product.DiscountPrice > 0 {
 			price = product.DiscountPrice
 		} else {
@@ -70,7 +70,7 @@ func (c *Cart) TotalPrice(productsCollection *mongo.Collection) (float64, error)
 		}
 
 		// Add the total price of the item (price * quantity)
-		totalPrice += price * float64(cartItem.Quantity)
+		totalPrice += price * int64(cartItem.Quantity)
 	}
 
 	// Return the calculated total price

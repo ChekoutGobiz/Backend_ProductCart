@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ChekoutGobiz/BackendChekout/middleware"
 	models "github.com/ChekoutGobiz/BackendChekout/model"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -17,6 +18,7 @@ import (
 
 var productCollection *mongo.Collection
 
+// Initialize MongoDB connection
 func init() {
 	// Load .env file
 	err := godotenv.Load()
@@ -48,6 +50,13 @@ func init() {
 
 // CreateProduct handles the creation of a new product
 func CreateProduct(c *fiber.Ctx) error {
+	// Middleware for debug and token verification
+	if err := middleware.VerifyJWT(c); err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid token",
+		})
+	}
+
 	var product models.Product
 	if err := c.BodyParser(&product); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -85,6 +94,13 @@ func CreateProduct(c *fiber.Ctx) error {
 
 // GetProducts retrieves all products from the database
 func GetProducts(c *fiber.Ctx) error {
+	// Middleware for token verification
+	if err := middleware.VerifyJWT(c); err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid token",
+		})
+	}
+
 	var products []models.Product
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
