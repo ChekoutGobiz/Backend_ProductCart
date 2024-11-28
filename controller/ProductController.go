@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/ChekoutGobiz/BackendChekout/middleware"
 	models "github.com/ChekoutGobiz/BackendChekout/model"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -50,12 +49,7 @@ func init() {
 
 // CreateProduct handles the creation of a new product
 func CreateProduct(c *fiber.Ctx) error {
-	// Middleware for debug and token verification
-	if err := middleware.VerifyJWT(c); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid token",
-		})
-	}
+	// Middleware for token verification already handled in routes.go
 
 	var product models.Product
 	if err := c.BodyParser(&product); err != nil {
@@ -65,11 +59,10 @@ func CreateProduct(c *fiber.Ctx) error {
 	}
 
 	// Jika tidak ada harga yang diberikan, set default harga ke 0
-	if product.DiscountPrice == 0 {
-		product.DiscountPrice = 0
-	}
-	if product.OriginalPrice == 0 {
-		product.OriginalPrice = 0
+	if product.DiscountPrice <= 0 || product.OriginalPrice <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Prices must be greater than zero",
+		})
 	}
 
 	// Tambahkan ID, CreatedAt, dan UpdatedAt
@@ -94,19 +87,13 @@ func CreateProduct(c *fiber.Ctx) error {
 
 // GetProducts retrieves all products from the database
 func GetProducts(c *fiber.Ctx) error {
-	// Middleware for token verification
-	if err := middleware.VerifyJWT(c); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid token",
-		})
-	}
-
 	var products []models.Product
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	cursor, err := productCollection.Find(ctx, bson.M{})
 	if err != nil {
+		log.Println("Error finding products:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to get products",
 		})
@@ -116,11 +103,19 @@ func GetProducts(c *fiber.Ctx) error {
 	for cursor.Next(ctx) {
 		var product models.Product
 		if err := cursor.Decode(&product); err != nil {
+			log.Println("Error decoding product:", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to decode product",
 			})
 		}
 		products = append(products, product)
+	}
+
+	if err := cursor.Err(); err != nil {
+		log.Println("Cursor iteration error:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Cursor iteration error",
+		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

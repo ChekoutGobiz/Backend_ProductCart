@@ -17,7 +17,7 @@ import (
 
 var (
 	cartCollection     *mongo.Collection
-	productsCollection *mongo.Collection // Tambahkan ini untuk akses koleksi produk
+	productsCollection *mongo.Collection // Add this for accessing the product collection
 )
 
 func init() {
@@ -27,17 +27,17 @@ func init() {
 		log.Fatal("Error loading .env file")
 	}
 
-	// Ambil MONGODB_URI dari environment
+	// Get MONGODB_URI from environment
 	mongoURI := os.Getenv("MONGODB_URI")
 
-	// Opsi koneksi MongoDB
+	// MongoDB connection options
 	clientOptions := options.Client().ApplyURI(mongoURI)
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Cek koneksi MongoDB
+	// Check MongoDB connection
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
 		log.Fatal("Failed to connect to MongoDB:", err)
@@ -45,10 +45,8 @@ func init() {
 
 	log.Println("MongoDB connection established successfully!")
 
-	// Initialize cart collection
+	// Initialize cart and product collections
 	cartCollection = client.Database("jajankuy").Collection("carts")
-
-	// Initialize products collection
 	productsCollection = client.Database("jajankuy").Collection("products")
 }
 
@@ -78,11 +76,17 @@ func AddItemToCart(c *fiber.Ctx) error {
 		})
 	}
 
-	// Find the cart for the user
+	// Find the cart for the user, or create a new one if it doesn't exist
 	var cart models.Cart
 	err = cartCollection.FindOne(context.Background(), bson.M{"user_id": userObjectID}).Decode(&cart)
-	if err != nil {
-		// If cart doesn't exist, create a new cart
+	if err != nil && err != mongo.ErrNoDocuments {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to find or create cart",
+		})
+	}
+
+	if err == mongo.ErrNoDocuments {
+		// Cart doesn't exist, create new cart
 		cart = models.Cart{
 			UserID:    userObjectID,
 			Items:     []models.CartItem{},
@@ -91,7 +95,7 @@ func AddItemToCart(c *fiber.Ctx) error {
 		}
 	}
 
-	// Add the item to the cart
+	// Add item to cart
 	cart.AddItem(cartItem)
 
 	// Save the updated cart to the database
@@ -99,7 +103,7 @@ func AddItemToCart(c *fiber.Ctx) error {
 		context.Background(),
 		bson.M{"user_id": userObjectID},
 		bson.M{"$set": bson.M{"items": cart.Items, "updated_at": time.Now()}},
-		options.Update().SetUpsert(true), // Tambahkan opsi upsert
+		options.Update().SetUpsert(true), // Upsert option ensures cart is created if it doesn't exist
 	)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -107,7 +111,6 @@ func AddItemToCart(c *fiber.Ctx) error {
 		})
 	}
 
-	// Return success response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Item added to cart successfully",
 		"cart":    cart,
@@ -168,11 +171,24 @@ func UpdateCartItem(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get userID from context (middleware should add userID to context)
-	userID := c.Locals("userID").(primitive.ObjectID)
+	// Get userID from query parameter or context
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "User ID is required",
+		})
+	}
+
+	// Convert userID to ObjectID
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID format",
+		})
+	}
 
 	// Update the item in the cart
-	_, err := cartCollection.UpdateOne(context.TODO(),
+	_, err = cartCollection.UpdateOne(context.TODO(),
 		bson.M{"user_id": userID, "items.product_id": cartItem.ProductID},
 		bson.M{"$set": bson.M{"items.$.quantity": cartItem.Quantity}})
 
@@ -187,8 +203,7 @@ func UpdateCartItem(c *fiber.Ctx) error {
 
 // RemoveItemFromCart removes an item from the cart
 func RemoveItemFromCart(c *fiber.Ctx) error {
-	// Ambil product_id dari parameter path
-	productIDStr := c.Params("product_id") // Mengambil product_id dari path URL
+	productIDStr := c.Params("product_id")
 	productID, err := primitive.ObjectIDFromHex(productIDStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -196,44 +211,37 @@ func RemoveItemFromCart(c *fiber.Ctx) error {
 		})
 	}
 
-	// Ambil userID dari context (pastikan middleware telah menambahkan userID ke context)
-	userID := c.Locals("userID").(primitive.ObjectID)
-
-	// Remove the item from the cart
-	_, err = cartCollection.UpdateOne(context.TODO(),
-		bson.M{"user_id": userID},
-		bson.M{"$pull": bson.M{"items": bson.M{"product_id": productID}}})
-
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to remove item from cart",
+	// Get userID from query parameter or context
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "User ID is required",
 		})
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// RemoveCartItem removes an item from the cart
-func RemoveCartItem(c *fiber.Ctx) error {
-	productIDStr := c.Query("product_id")
-	productID, err := primitive.ObjectIDFromHex(productIDStr)
+	// Convert userID to ObjectID
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid product ID",
+			"error": "Invalid user ID format",
 		})
 	}
 
-	// Ambil userID dari context (pastikan middleware telah menambahkan userID ke context)
-	userID := c.Locals("userID").(primitive.ObjectID)
-
 	// Remove the item from the cart
-	_, err = cartCollection.UpdateOne(context.TODO(),
+	result, err := cartCollection.UpdateOne(
+		context.TODO(),
 		bson.M{"user_id": userID},
-		bson.M{"$pull": bson.M{"items": bson.M{"product_id": productID}}})
-
+		bson.M{"$pull": bson.M{"items": bson.M{"product_id": productID}}},
+	)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to remove item from cart",
+		})
+	}
+
+	if result.ModifiedCount == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Item not found in cart",
 		})
 	}
 

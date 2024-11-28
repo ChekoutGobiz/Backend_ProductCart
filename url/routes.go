@@ -25,11 +25,15 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/products", controllers.GetProducts)
 
 	// Cart routes - Protected by JWT middleware
-	cart := api.Group("/cart")
-	cart.Use(middleware.VerifyJWT) // Hanya proteksi rute cart
-	cart.Post("/", controllers.AddItemToCart)
-	cart.Get("/", controllers.GetCart)
-	cart.Put("/item", controllers.UpdateCartItem)
-	cart.Delete("/item", controllers.RemoveCartItem)
-	cart.Delete("/item/:product_id", controllers.RemoveItemFromCart)
+	// Menambahkan rute untuk menambahkan item ke keranjang dengan verifikasi JWT
+	api.Post("/cart", middleware.VerifyJWT, controllers.AddItemToCart)
+
+	// Menambahkan rute untuk mengambil keranjang pengguna dengan verifikasi JWT
+	api.Get("/cart", middleware.VerifyJWT, controllers.GetCart)
+
+	// Menambahkan rute untuk memperbarui jumlah item dalam keranjang dengan verifikasi JWT
+	api.Put("/cart", middleware.VerifyJWT, controllers.UpdateCartItem)
+
+	// Menambahkan rute untuk menghapus item dari keranjang dengan verifikasi JWT
+	api.Delete("/cart/:product_id", middleware.VerifyJWT, controllers.RemoveItemFromCart)
 }

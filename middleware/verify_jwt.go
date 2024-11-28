@@ -12,11 +12,13 @@ import (
 func VerifyJWT(c *fiber.Ctx) error {
 	// Ambil token dari header Authorization
 	tokenString := c.Get("Authorization")
+	log.Println("Received token:", tokenString)
 
 	// Token harus diawali dengan "Bearer "
 	if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
+		log.Println("Invalid token format")
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid token",
+			"error": "Invalid token format",
 		})
 	}
 
@@ -25,13 +27,13 @@ func VerifyJWT(c *fiber.Ctx) error {
 
 	// Verifikasi token
 	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Verifikasi metode signature, pastikan menggunakan algoritma yang tepat
+		// Pastikan metode signing adalah HMAC
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			log.Println("Unexpected signing method")
 			return nil, fiber.ErrUnauthorized
 		}
 
-		// Return JWT secret key dari env atau konfigurasi
+		// Kembalikan secret key untuk validasi
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 

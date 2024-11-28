@@ -16,9 +16,9 @@ var GoBiz = fiber.Config{
 
 // Konfigurasi CORS (Fiber middleware cors.New)
 var Cors = cors.New(cors.Config{
-	AllowOrigins: "http://127.0.0.1:5500", // Sesuaikan dengan origin yang diizinkan
-	AllowMethods: "GET,POST,PUT,DELETE",
-	AllowHeaders: "Content-Type,Authorization",
+	AllowOrigins: "https://chekoutgobiz.github.io, http://localhost:5502", // Daftar origins yang dipisahkan koma
+	AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",                           // Daftar metode yang dipisahkan koma
+	AllowHeaders: "Content-Type,Authorization",                            // Daftar headers yang dipisahkan koma
 })
 
 // IPPort bisa disesuaikan dengan environment atau hardcoded
