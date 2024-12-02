@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
@@ -49,26 +50,40 @@ func init() {
 // Register function for user registration
 func Register(c *fiber.Ctx) error {
 	var user models.User
-	if err := json.Unmarshal(c.Body(), &user); err != nil {
+	if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid data"})
 	}
 
 	// Hash the password
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
-	user.Password = string(hashedPassword)
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error hashing password"})
+    }
+    user.Password = string(hashedPassword) // Pastikan hashedPassword disimpan di database
+    
+
+	// Generate unique ObjectID
+	user.ID = primitive.NewObjectID()
 
 	// Insert user to database
 	collection := client.Database("jajankuy").Collection("users")
-	_, err := collection.InsertOne(context.TODO(), user)
+	_, err = collection.InsertOne(context.TODO(), user)
 	if err != nil {
 		log.Println("Error inserting user:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error saving user"})
 	}
 
+	// Remove password from response for security
+	user.Password = ""
+
 	// Return the created user in response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User successfully registered",
-		"user":    user,
+		"user": fiber.Map{
+			"_id":   user.ID.Hex(),
+			"name":  user.Name,
+			"email": user.Email,
+		},
 	})
 }
 
@@ -88,10 +103,15 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not found"})
 	}
 
+	// Debugging: Check passwords
+	log.Printf("Login password: %s", loginData.Password)
+	log.Printf("Stored hashed password: %s", storedUser.Password)
+
 	// Compare the hashed password with the provided password
-	if err := bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(loginData.Password)); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid password"})
-	}
+    if err := bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(loginData.Password)); err != nil {
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid password"})
+    }
+    
 
 	// Generate JWT Token
 	token, err := generateJWT(storedUser.Email, storedUser.ID.Hex()) // Convert ObjectID to string
@@ -109,6 +129,7 @@ func Login(c *fiber.Ctx) error {
 		"token": token, // Add "Bearer" prefix to the token
 	})
 }
+
 
 // generateJWT generates a JWT token for the given email and user ID
 func generateJWT(email string, userID string) (string, error) {
