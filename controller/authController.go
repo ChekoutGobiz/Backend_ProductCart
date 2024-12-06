@@ -158,13 +158,11 @@ func Logout(c *fiber.Ctx) error {
         })
     }
 
-    // Informasikan client untuk menghapus token dan mengarahkan ke login
+    // Menyampaikan bahwa logout berhasil dan token harus dihapus dari client
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
-        "message": "Successfully logged out. Please remove the token from your storage.",
+        "message": "Successfully logged out. Token has been blacklisted.",
     })
 }
-
-
 
 // generateJWT generates a JWT token for the given email and user ID
 func generateJWT(email string, userID string) (string, error) {
