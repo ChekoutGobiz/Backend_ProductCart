@@ -14,6 +14,7 @@ func SetupRoutes(app *fiber.App) {
 	// Authentication routes
 	api.Post("/register", controllers.Register)
 	api.Post("/login", controllers.Login)
+	app.Post("/logout", controllers.Logout)  // Menambahkan route logout
 
 	// Region routes
 	api.Post("/regions", controllers.CreateRegion)

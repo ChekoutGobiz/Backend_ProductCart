@@ -130,6 +130,14 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
+// Logout function to invalidate the session (client-side)
+func Logout(c *fiber.Ctx) error {
+
+	// Optionally, return a success message
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Successfully logged out. Please remove the token from localStorage or cookie.",
+	})
+}
 
 // generateJWT generates a JWT token for the given email and user ID
 func generateJWT(email string, userID string) (string, error) {
