@@ -144,7 +144,7 @@ func Logout(c *fiber.Ctx) error {
     // Hapus prefix "Bearer " jika ada
     token = token[len("Bearer "):]
 
-    // Simpan token yang dicabut ke dalam database MongoDB
+    // Simpan token yang dicabut ke dalam database MongoDB (blacklist token)
     collection := client.Database("jajankuy").Collection("blacklisted_tokens")
     blacklistedToken := models.BlacklistedToken{
         Token:     token,
@@ -158,11 +158,12 @@ func Logout(c *fiber.Ctx) error {
         })
     }
 
-    // Informasikan client untuk menghapus token
+    // Informasikan client untuk menghapus token dan mengarahkan ke login
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
         "message": "Successfully logged out. Please remove the token from your storage.",
     })
 }
+
 
 
 // generateJWT generates a JWT token for the given email and user ID
