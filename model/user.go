@@ -16,6 +16,12 @@ type User struct {
 	Password string             `json:"password,omitempty" bson:"password,omitempty"`
 }
 
+type BlacklistedToken struct {
+    ID        primitive.ObjectID `bson:"_id,omitempty"`
+    Token     string             `bson:"token"`
+    CreatedAt int64              `bson:"created_at"`
+}
+
 func CreateUser(user *User, collection *mongo.Collection) (*mongo.InsertOneResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

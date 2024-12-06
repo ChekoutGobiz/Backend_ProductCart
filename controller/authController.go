@@ -130,14 +130,40 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
-// Logout function to invalidate the session (client-side)
 func Logout(c *fiber.Ctx) error {
+    // Mengambil token dari header Authorization
+    token := c.Get("Authorization")
 
-	// Optionally, return a success message
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Successfully logged out. Please remove the token from localStorage or cookie.",
-	})
+    // Jika token kosong, kembalikan respons error
+    if token == "" {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "No token provided",
+        })
+    }
+
+    // Hapus prefix "Bearer " jika ada
+    token = token[len("Bearer "):]
+
+    // Simpan token yang dicabut ke dalam database MongoDB
+    collection := client.Database("jajankuy").Collection("blacklisted_tokens")
+    blacklistedToken := models.BlacklistedToken{
+        Token:     token,
+        CreatedAt: time.Now().Unix(),
+    }
+
+    _, err := collection.InsertOne(context.TODO(), blacklistedToken)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Error blacklisting token",
+        })
+    }
+
+    // Informasikan client untuk menghapus token
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "message": "Successfully logged out. Please remove the token from your storage.",
+    })
 }
+
 
 // generateJWT generates a JWT token for the given email and user ID
 func generateJWT(email string, userID string) (string, error) {
